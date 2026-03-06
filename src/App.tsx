@@ -11,6 +11,9 @@ import CoordenacaoTurmas from "./pages/CoordenacaoTurmas";
 import CoordenacaoDocentes from "./pages/CoordenacaoDocentes";
 import CoordenacaoIndicadores from "./pages/CoordenacaoIndicadores";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminUsuarios from "./pages/AdminUsuarios";
+import AdminConfiguracoes from "./pages/AdminConfiguracoes";
+import AdminRelatorios from "./pages/AdminRelatorios";
 import NotFound from "./pages/NotFound";
 import BancoQuestoes from "./pages/BancoQuestoes";
 import CriarAvaliacao from "./pages/CriarAvaliacao";
@@ -47,7 +50,10 @@ const App = () => (
           <Route path="/coordenacao/questoes" element={<BancoQuestoes />} />
           <Route path="/coordenacao/*" element={<CoordenacaoDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/usuarios" element={<AdminUsuarios />} />
           <Route path="/admin/questoes" element={<BancoQuestoes />} />
+          <Route path="/admin/configuracoes" element={<AdminConfiguracoes />} />
+          <Route path="/admin/relatorios" element={<AdminRelatorios />} />
           <Route path="/admin/*" element={<AdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
