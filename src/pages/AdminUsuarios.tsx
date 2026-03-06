@@ -208,7 +208,7 @@ export default function AdminUsuarios() {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((u) => (
+                {filtrados.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((u) => (
                   <tr key={u.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4">
                       <p className="text-sm font-medium text-foreground">{u.nome}</p>
