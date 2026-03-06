@@ -4,6 +4,7 @@ import {
   Users, Plus, Search, Edit2, Trash2, Check, X, Shield,
   GraduationCap, BookOpen, UserCheck, UserX, ChevronDown,
 } from "lucide-react";
+import TablePagination from "@/components/TablePagination";
 import AppLayout from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
