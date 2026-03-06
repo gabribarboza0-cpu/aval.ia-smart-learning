@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   Users, Plus, Search, Edit2, Trash2, Check, X, GraduationCap,
 } from "lucide-react";
+import TablePagination from "@/components/TablePagination";
 import AppLayout from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,8 @@ export default function AdminTurmas() {
   const [form, setForm] = useState(emptyTurma);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [vincularOpen, setVincularOpen] = useState<Turma | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtradas = useMemo(() => {
     return turmas.filter((t) => {
@@ -148,7 +151,7 @@ export default function AdminTurmas() {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.map((t) => (
+                {filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((t) => (
                   <tr key={t.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4 font-medium text-foreground">{t.codigo}</td>
                     <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{t.nome}</td>
@@ -193,6 +196,7 @@ export default function AdminTurmas() {
               </tbody>
             </table>
           </div>
+          <TablePagination totalItems={filtradas.length} currentPage={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
         </div>
 
         {/* Dialog criar/editar */}

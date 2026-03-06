@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   BookOpen, Plus, Search, Edit2, Trash2, Check, X, Users,
 } from "lucide-react";
+import TablePagination from "@/components/TablePagination";
 import AppLayout from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,8 @@ export default function AdminDisciplinas() {
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [vincularOpen, setVincularOpen] = useState<Disciplina | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtradas = useMemo(() => {
     return disciplinas.filter((d) => {
@@ -157,7 +160,7 @@ export default function AdminDisciplinas() {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.map((d) => (
+                {filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((d) => (
                   <tr key={d.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4 font-medium text-foreground">{d.codigo}</td>
                     <td className="py-3 px-4 text-foreground">{d.nome}</td>
@@ -203,6 +206,7 @@ export default function AdminDisciplinas() {
               </tbody>
             </table>
           </div>
+          <TablePagination totalItems={filtradas.length} currentPage={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
         </div>
 
         {/* Dialog criar/editar */}

@@ -4,6 +4,7 @@ import {
   Users, Plus, Search, Edit2, Trash2, Check, X, Shield,
   GraduationCap, BookOpen, UserCheck, UserX, ChevronDown,
 } from "lucide-react";
+import TablePagination from "@/components/TablePagination";
 import AppLayout from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,8 @@ export default function AdminUsuarios() {
   const [editando, setEditando] = useState<Usuario | null>(null);
   const [form, setForm] = useState(emptyUser);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtrados = useMemo(() => {
     return usuarios.filter((u) => {
@@ -205,7 +208,7 @@ export default function AdminUsuarios() {
                 </tr>
               </thead>
               <tbody>
-                {filtrados.map((u) => (
+                {filtrados.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((u) => (
                   <tr key={u.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4">
                       <p className="text-sm font-medium text-foreground">{u.nome}</p>
@@ -269,6 +272,7 @@ export default function AdminUsuarios() {
               </tbody>
             </table>
           </div>
+          <TablePagination totalItems={filtrados.length} currentPage={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
         </div>
 
         {/* Dialog criar/editar */}
