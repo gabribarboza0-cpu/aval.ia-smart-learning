@@ -53,6 +53,8 @@ export default function AdminTurmas() {
   const [form, setForm] = useState(emptyTurma);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [vincularOpen, setVincularOpen] = useState<Turma | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtradas = useMemo(() => {
     return turmas.filter((t) => {
