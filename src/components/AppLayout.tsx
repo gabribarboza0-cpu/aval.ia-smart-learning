@@ -70,6 +70,7 @@ function AppSidebarContent() {
   const location = useLocation();
 
   if (!user) return null;
+  const roleForNav = user.role === "coordenador" ? "coordenador" : user.role;
 
   const items = navItems[user.role] || [];
 

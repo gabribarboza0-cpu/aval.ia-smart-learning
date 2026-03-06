@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
-  BookOpen, Plus, Search, Edit2, Trash2, Check, X, Users,
+  BookOpen, Plus, Search, Edit2, Trash2, Check, X,
 } from "lucide-react";
 import TablePagination from "@/components/TablePagination";
 import AppLayout from "@/components/AppLayout";
@@ -14,45 +14,24 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Disciplina {
   id: string;
   codigo: string;
   nome: string;
-  cargaHoraria: number;
+  carga_horaria: number;
   periodo: string;
-  status: "Ativa" | "Inativa";
-  professorId?: string;
-  turmasVinculadas: string[];
+  status: string;
+  professor_id: string | null;
+  professor_nome?: string;
+  turmas_count: number;
 }
 
-const PROFESSORES = [
-  { id: "u2", nome: "Dr. João Santos" },
-  { id: "u6", nome: "Prof. Beatriz Nunes" },
-  { id: "u9", nome: "Prof. Carlos Lima" },
-  { id: "u10", nome: "Prof. Roberto Mendes" },
-];
-
-const TURMAS = [
-  { id: "t1", codigo: "DIR-1A" },
-  { id: "t2", codigo: "DIR-1B" },
-  { id: "t3", codigo: "DIR-3B" },
-  { id: "t4", codigo: "DIR-5B" },
-];
-
-const INITIAL_DISCIPLINAS: Disciplina[] = [
-  { id: "d1", codigo: "DCV01", nome: "Direito Civil I", cargaHoraria: 80, periodo: "1º", status: "Ativa", professorId: "u2", turmasVinculadas: ["t1", "t2"] },
-  { id: "d2", codigo: "DPN01", nome: "Direito Penal I", cargaHoraria: 80, periodo: "1º", status: "Ativa", professorId: "u9", turmasVinculadas: ["t1", "t2"] },
-  { id: "d3", codigo: "DTR01", nome: "Direito Trabalhista I", cargaHoraria: 60, periodo: "3º", status: "Ativa", professorId: "u6", turmasVinculadas: ["t3"] },
-  { id: "d4", codigo: "DTB01", nome: "Direito Tributário I", cargaHoraria: 60, periodo: "5º", status: "Ativa", professorId: "u10", turmasVinculadas: ["t4"] },
-  { id: "d5", codigo: "DCN01", nome: "Direito Constitucional I", cargaHoraria: 80, periodo: "1º", status: "Ativa", turmasVinculadas: ["t1", "t2"] },
-  { id: "d6", codigo: "DPR01", nome: "Direito Processual Civil I", cargaHoraria: 80, periodo: "3º", status: "Inativa", turmasVinculadas: [] },
-];
-
-const emptyForm: Omit<Disciplina, "id"> = { codigo: "", nome: "", cargaHoraria: 60, periodo: "1º", status: "Ativa", professorId: "", turmasVinculadas: [] };
+const emptyForm = { codigo: "", nome: "", carga_horaria: 60, periodo: "1º", status: "Ativa", professor_id: "" };
 
 export default function AdminDisciplinas() {
-  const [disciplinas, setDisciplinas] = useState<Disciplina[]>(INITIAL_DISCIPLINAS);
+  const [disciplinas, setDisciplinas] = useState<Disciplina[]>([]);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -62,6 +41,52 @@ export default function AdminDisciplinas() {
   const [vincularOpen, setVincularOpen] = useState<Disciplina | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isLoading, setIsLoading] = useState(true);
+  const [professores, setProfessores] = useState<{ id: string; nome: string }[]>([]);
+  const [turmasDisponiveis, setTurmasDisponiveis] = useState<{ id: string; codigo: string }[]>([]);
+  const [turmasVinculadas, setTurmasVinculadas] = useState<string[]>([]);
+
+  const fetchDisciplinas = async () => {
+    setIsLoading(true);
+    const { data } = await supabase
+      .from("disciplinas")
+      .select("*, disciplina_turmas(count)")
+      .order("codigo");
+
+    if (data) {
+      // Fetch professor names
+      const profIds = [...new Set(data.filter((d: any) => d.professor_id).map((d: any) => d.professor_id))];
+      let profMap = new Map<string, string>();
+      if (profIds.length > 0) {
+        const { data: profiles } = await supabase.from("profiles").select("user_id, nome").in("user_id", profIds);
+        profiles?.forEach((p) => profMap.set(p.user_id, p.nome));
+      }
+
+      setDisciplinas(data.map((d: any) => ({
+        id: d.id,
+        codigo: d.codigo,
+        nome: d.nome,
+        carga_horaria: d.carga_horaria,
+        periodo: d.periodo,
+        status: d.status,
+        professor_id: d.professor_id,
+        professor_nome: d.professor_id ? profMap.get(d.professor_id) || "—" : "—",
+        turmas_count: d.disciplina_turmas?.[0]?.count || 0,
+      })));
+    }
+    setIsLoading(false);
+  };
+
+  const fetchProfessores = async () => {
+    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "professor");
+    if (roles) {
+      const ids = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("user_id, nome").in("user_id", ids);
+      setProfessores(profiles?.map((p) => ({ id: p.user_id, nome: p.nome })) || []);
+    }
+  };
+
+  useEffect(() => { fetchDisciplinas(); fetchProfessores(); }, []);
 
   const filtradas = useMemo(() => {
     return disciplinas.filter((d) => {
@@ -78,41 +103,59 @@ export default function AdminDisciplinas() {
 
   const openEdit = (d: Disciplina) => {
     setEditando(d);
-    setForm({ codigo: d.codigo, nome: d.nome, cargaHoraria: d.cargaHoraria, periodo: d.periodo, status: d.status, professorId: d.professorId || "", turmasVinculadas: [...d.turmasVinculadas] });
+    setForm({ codigo: d.codigo, nome: d.nome, carga_horaria: d.carga_horaria, periodo: d.periodo, status: d.status, professor_id: d.professor_id || "" });
     setDialogOpen(true);
   };
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!form.codigo.trim() || !form.nome.trim()) {
       toast({ title: "Preencha código e nome", variant: "destructive" });
       return;
     }
+    const payload = {
+      codigo: form.codigo, nome: form.nome, carga_horaria: form.carga_horaria,
+      periodo: form.periodo, status: form.status,
+      professor_id: form.professor_id || null,
+    };
     if (editando) {
-      setDisciplinas((prev) => prev.map((d) => d.id === editando.id ? { ...d, ...form } : d));
+      const { error } = await supabase.from("disciplinas").update(payload).eq("id", editando.id);
+      if (error) { toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Disciplina atualizada com sucesso" });
     } else {
-      setDisciplinas((prev) => [...prev, { ...form, id: `d${Date.now()}` }]);
+      const { error } = await supabase.from("disciplinas").insert(payload);
+      if (error) { toast({ title: "Erro ao criar", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Disciplina criada com sucesso" });
     }
     setDialogOpen(false);
+    fetchDisciplinas();
   };
 
-  const excluir = (id: string) => {
-    setDisciplinas((prev) => prev.filter((d) => d.id !== id));
+  const excluir = async (id: string) => {
+    await supabase.from("disciplinas").delete().eq("id", id);
     setDeleteConfirm(null);
     toast({ title: "Disciplina excluída" });
+    fetchDisciplinas();
   };
 
-  const toggleTurma = (discId: string, turmaId: string) => {
-    setDisciplinas((prev) => prev.map((d) => {
-      if (d.id !== discId) return d;
-      const has = d.turmasVinculadas.includes(turmaId);
-      return { ...d, turmasVinculadas: has ? d.turmasVinculadas.filter((t) => t !== turmaId) : [...d.turmasVinculadas, turmaId] };
-    }));
+  const openVincularTurmas = async (d: Disciplina) => {
+    setVincularOpen(d);
+    const { data: turmas } = await supabase.from("turmas").select("id, codigo").eq("status", "Ativa").order("codigo");
+    setTurmasDisponiveis(turmas || []);
+    const { data: linked } = await supabase.from("disciplina_turmas").select("turma_id").eq("disciplina_id", d.id);
+    setTurmasVinculadas(linked?.map((l) => l.turma_id) || []);
   };
 
-  const getProfNome = (id?: string) => PROFESSORES.find((p) => p.id === id)?.nome || "—";
-  const getTurmaCodigo = (id: string) => TURMAS.find((t) => t.id === id)?.codigo || id;
+  const toggleTurma = async (discId: string, turmaId: string) => {
+    const isLinked = turmasVinculadas.includes(turmaId);
+    if (isLinked) {
+      await supabase.from("disciplina_turmas").delete().eq("disciplina_id", discId).eq("turma_id", turmaId);
+      setTurmasVinculadas((prev) => prev.filter((t) => t !== turmaId));
+    } else {
+      await supabase.from("disciplina_turmas").insert({ disciplina_id: discId, turma_id: turmaId });
+      setTurmasVinculadas((prev) => [...prev, turmaId]);
+    }
+    fetchDisciplinas();
+  };
 
   return (
     <AppLayout>
@@ -160,16 +203,18 @@ export default function AdminDisciplinas() {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((d) => (
+                {isLoading ? (
+                  <tr><td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">Carregando...</td></tr>
+                ) : filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((d) => (
                   <tr key={d.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4 font-medium text-foreground">{d.codigo}</td>
                     <td className="py-3 px-4 text-foreground">{d.nome}</td>
-                    <td className="py-3 px-4 text-center text-muted-foreground hidden sm:table-cell">{d.cargaHoraria}h</td>
+                    <td className="py-3 px-4 text-center text-muted-foreground hidden sm:table-cell">{d.carga_horaria}h</td>
                     <td className="py-3 px-4 text-center text-muted-foreground hidden md:table-cell">{d.periodo}</td>
-                    <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{getProfNome(d.professorId)}</td>
+                    <td className="py-3 px-4 text-muted-foreground hidden lg:table-cell">{d.professor_nome}</td>
                     <td className="py-3 px-4 text-center">
-                      <button onClick={() => setVincularOpen(d)} className="cursor-pointer">
-                        <Badge className="text-[10px] bg-info/10 text-info border-info/20">{d.turmasVinculadas.length} turmas</Badge>
+                      <button onClick={() => openVincularTurmas(d)} className="cursor-pointer">
+                        <Badge className="text-[10px] bg-info/10 text-info border-info/20">{d.turmas_count} turmas</Badge>
                       </button>
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -200,7 +245,7 @@ export default function AdminDisciplinas() {
                     </td>
                   </tr>
                 ))}
-                {filtradas.length === 0 && (
+                {!isLoading && filtradas.length === 0 && (
                   <tr><td colSpan={8} className="py-8 text-center text-sm text-muted-foreground">Nenhuma disciplina encontrada.</td></tr>
                 )}
               </tbody>
@@ -221,7 +266,7 @@ export default function AdminDisciplinas() {
                 </div>
                 <div>
                   <Label className="text-xs">Carga Horária</Label>
-                  <Input type="number" value={form.cargaHoraria} onChange={(e) => setForm({ ...form, cargaHoraria: Number(e.target.value) })} />
+                  <Input type="number" value={form.carga_horaria} onChange={(e) => setForm({ ...form, carga_horaria: Number(e.target.value) })} />
                 </div>
               </div>
               <div>
@@ -242,7 +287,7 @@ export default function AdminDisciplinas() {
                 </div>
                 <div>
                   <Label className="text-xs">Status</Label>
-                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Disciplina["status"] })}>
+                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Ativa">Ativa</SelectItem>
@@ -253,11 +298,11 @@ export default function AdminDisciplinas() {
               </div>
               <div>
                 <Label className="text-xs">Professor responsável</Label>
-                <Select value={form.professorId} onValueChange={(v) => setForm({ ...form, professorId: v })}>
+                <Select value={form.professor_id} onValueChange={(v) => setForm({ ...form, professor_id: v })}>
                   <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="">Nenhum</SelectItem>
-                    {PROFESSORES.map((p) => (
+                    {professores.map((p) => (
                       <SelectItem key={p.id} value={p.id}>{p.nome}</SelectItem>
                     ))}
                   </SelectContent>
@@ -277,9 +322,11 @@ export default function AdminDisciplinas() {
             <DialogHeader>
               <DialogTitle>Turmas — {vincularOpen?.nome}</DialogTitle>
             </DialogHeader>
-            <div className="space-y-2 py-2">
-              {TURMAS.map((t) => {
-                const vinculada = vincularOpen?.turmasVinculadas.includes(t.id);
+            <div className="space-y-2 py-2 max-h-64 overflow-y-auto">
+              {turmasDisponiveis.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhuma turma cadastrada.</p>
+              ) : turmasDisponiveis.map((t) => {
+                const vinculada = turmasVinculadas.includes(t.id);
                 return (
                   <button
                     key={t.id}

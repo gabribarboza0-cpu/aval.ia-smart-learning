@@ -1,7 +1,7 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
-  Users, Plus, Search, Edit2, Trash2, Check, X, GraduationCap,
+  Plus, Search, Edit2, Trash2, Check, X, GraduationCap,
 } from "lucide-react";
 import TablePagination from "@/components/TablePagination";
 import AppLayout from "@/components/AppLayout";
@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Turma {
   id: string;
@@ -21,40 +22,54 @@ interface Turma {
   nome: string;
   periodo: string;
   turno: "Matutino" | "Vespertino" | "Noturno";
-  status: "Ativa" | "Inativa";
-  alunos: string[]; // user ids
+  status: string;
+  alunos_count: number;
 }
 
-const INITIAL_TURMAS: Turma[] = [
-  { id: "t1", codigo: "DIR-1A", nome: "Direito 1º Período - Turma A", periodo: "1º", turno: "Matutino", status: "Ativa", alunos: ["u1"] },
-  { id: "t2", codigo: "DIR-1B", nome: "Direito 1º Período - Turma B", periodo: "1º", turno: "Noturno", status: "Ativa", alunos: ["u8"] },
-  { id: "t3", codigo: "DIR-3B", nome: "Direito 3º Período - Turma B", periodo: "3º", turno: "Noturno", status: "Ativa", alunos: ["u5", "u7", "u11"] },
-  { id: "t4", codigo: "DIR-5B", nome: "Direito 5º Período - Turma B", periodo: "5º", turno: "Vespertino", status: "Ativa", alunos: ["u12"] },
-  { id: "t5", codigo: "DIR-7A", nome: "Direito 7º Período - Turma A", periodo: "7º", turno: "Matutino", status: "Inativa", alunos: [] },
-];
+interface TurmaAluno {
+  aluno_id: string;
+  nome: string;
+}
 
-const ALUNOS_DISPONIVEIS = [
-  { id: "u1", nome: "Maria Silva" },
-  { id: "u5", nome: "Fernanda Lima" },
-  { id: "u7", nome: "Pedro Almeida" },
-  { id: "u8", nome: "Juliana Costa" },
-  { id: "u11", nome: "Ricardo Lima" },
-  { id: "u12", nome: "Camila Rocha" },
-];
-
-const emptyTurma: Omit<Turma, "id"> = { codigo: "", nome: "", periodo: "1º", turno: "Matutino", status: "Ativa", alunos: [] };
+const emptyForm = { codigo: "", nome: "", periodo: "1º", turno: "Matutino" as "Matutino" | "Vespertino" | "Noturno", status: "Ativa" };
 
 export default function AdminTurmas() {
-  const [turmas, setTurmas] = useState<Turma[]>(INITIAL_TURMAS);
+  const [turmas, setTurmas] = useState<Turma[]>([]);
   const [busca, setBusca] = useState("");
   const [filtroStatus, setFiltroStatus] = useState("todos");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editando, setEditando] = useState<Turma | null>(null);
-  const [form, setForm] = useState(emptyTurma);
+  const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [vincularOpen, setVincularOpen] = useState<Turma | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [isLoading, setIsLoading] = useState(true);
+  const [alunosDisponiveis, setAlunosDisponiveis] = useState<{ id: string; nome: string }[]>([]);
+  const [alunosVinculados, setAlunosVinculados] = useState<string[]>([]);
+
+  const fetchTurmas = async () => {
+    setIsLoading(true);
+    const { data } = await supabase
+      .from("turmas")
+      .select("*, turma_alunos(count)")
+      .order("codigo");
+
+    if (data) {
+      setTurmas(data.map((t: any) => ({
+        id: t.id,
+        codigo: t.codigo,
+        nome: t.nome,
+        periodo: t.periodo,
+        turno: t.turno,
+        status: t.status,
+        alunos_count: t.turma_alunos?.[0]?.count || 0,
+      })));
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => { fetchTurmas(); }, []);
 
   const filtradas = useMemo(() => {
     return turmas.filter((t) => {
@@ -67,44 +82,70 @@ export default function AdminTurmas() {
     });
   }, [turmas, busca, filtroStatus]);
 
-  const openCreate = () => { setEditando(null); setForm(emptyTurma); setDialogOpen(true); };
+  const openCreate = () => { setEditando(null); setForm(emptyForm); setDialogOpen(true); };
 
   const openEdit = (t: Turma) => {
     setEditando(t);
-    setForm({ codigo: t.codigo, nome: t.nome, periodo: t.periodo, turno: t.turno, status: t.status, alunos: [...t.alunos] });
+    setForm({ codigo: t.codigo, nome: t.nome, periodo: t.periodo, turno: t.turno, status: t.status });
     setDialogOpen(true);
   };
 
-  const salvar = () => {
+  const salvar = async () => {
     if (!form.codigo.trim() || !form.nome.trim()) {
       toast({ title: "Preencha código e nome", variant: "destructive" });
       return;
     }
     if (editando) {
-      setTurmas((prev) => prev.map((t) => t.id === editando.id ? { ...t, ...form } : t));
+      const { error } = await supabase.from("turmas").update({
+        codigo: form.codigo, nome: form.nome, periodo: form.periodo,
+        turno: form.turno as any, status: form.status,
+      }).eq("id", editando.id);
+      if (error) { toast({ title: "Erro ao atualizar", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Turma atualizada com sucesso" });
     } else {
-      setTurmas((prev) => [...prev, { ...form, id: `t${Date.now()}` }]);
+      const { error } = await supabase.from("turmas").insert({
+        codigo: form.codigo, nome: form.nome, periodo: form.periodo,
+        turno: form.turno as any, status: form.status,
+      });
+      if (error) { toast({ title: "Erro ao criar", description: error.message, variant: "destructive" }); return; }
       toast({ title: "Turma criada com sucesso" });
     }
     setDialogOpen(false);
+    fetchTurmas();
   };
 
-  const excluir = (id: string) => {
-    setTurmas((prev) => prev.filter((t) => t.id !== id));
+  const excluir = async (id: string) => {
+    await supabase.from("turmas").delete().eq("id", id);
     setDeleteConfirm(null);
     toast({ title: "Turma excluída" });
+    fetchTurmas();
   };
 
-  const toggleAluno = (turmaId: string, alunoId: string) => {
-    setTurmas((prev) => prev.map((t) => {
-      if (t.id !== turmaId) return t;
-      const has = t.alunos.includes(alunoId);
-      return { ...t, alunos: has ? t.alunos.filter((a) => a !== alunoId) : [...t.alunos, alunoId] };
-    }));
+  const openVincular = async (t: Turma) => {
+    setVincularOpen(t);
+    // Fetch alunos (profiles with role aluno)
+    const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "aluno");
+    if (roles) {
+      const userIds = roles.map((r) => r.user_id);
+      const { data: profiles } = await supabase.from("profiles").select("user_id, nome").in("user_id", userIds);
+      setAlunosDisponiveis(profiles?.map((p) => ({ id: p.user_id, nome: p.nome })) || []);
+    }
+    // Fetch currently linked
+    const { data: linked } = await supabase.from("turma_alunos").select("aluno_id").eq("turma_id", t.id);
+    setAlunosVinculados(linked?.map((l) => l.aluno_id) || []);
   };
 
-  const getNomeAluno = (id: string) => ALUNOS_DISPONIVEIS.find((a) => a.id === id)?.nome || id;
+  const toggleAluno = async (turmaId: string, alunoId: string) => {
+    const isLinked = alunosVinculados.includes(alunoId);
+    if (isLinked) {
+      await supabase.from("turma_alunos").delete().eq("turma_id", turmaId).eq("aluno_id", alunoId);
+      setAlunosVinculados((prev) => prev.filter((a) => a !== alunoId));
+    } else {
+      await supabase.from("turma_alunos").insert({ turma_id: turmaId, aluno_id: alunoId });
+      setAlunosVinculados((prev) => [...prev, alunoId]);
+    }
+    fetchTurmas();
+  };
 
   return (
     <AppLayout>
@@ -151,15 +192,17 @@ export default function AdminTurmas() {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((t) => (
+                {isLoading ? (
+                  <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Carregando...</td></tr>
+                ) : filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((t) => (
                   <tr key={t.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4 font-medium text-foreground">{t.codigo}</td>
                     <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{t.nome}</td>
                     <td className="py-3 px-4 text-center text-muted-foreground">{t.periodo}</td>
                     <td className="py-3 px-4 text-center text-muted-foreground hidden md:table-cell">{t.turno}</td>
                     <td className="py-3 px-4 text-center">
-                      <button onClick={() => setVincularOpen(t)} className="cursor-pointer">
-                        <Badge className="text-[10px] bg-info/10 text-info border-info/20">{t.alunos.length} alunos</Badge>
+                      <button onClick={() => openVincular(t)} className="cursor-pointer">
+                        <Badge className="text-[10px] bg-info/10 text-info border-info/20">{t.alunos_count} alunos</Badge>
                       </button>
                     </td>
                     <td className="py-3 px-4 text-center">
@@ -190,7 +233,7 @@ export default function AdminTurmas() {
                     </td>
                   </tr>
                 ))}
-                {filtradas.length === 0 && (
+                {!isLoading && filtradas.length === 0 && (
                   <tr><td colSpan={7} className="py-8 text-center text-sm text-muted-foreground">Nenhuma turma encontrada.</td></tr>
                 )}
               </tbody>
@@ -228,7 +271,7 @@ export default function AdminTurmas() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <Label className="text-xs">Turno</Label>
-                  <Select value={form.turno} onValueChange={(v) => setForm({ ...form, turno: v as Turma["turno"] })}>
+                  <Select value={form.turno} onValueChange={(v) => setForm({ ...form, turno: v as any })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Matutino">Matutino</SelectItem>
@@ -239,7 +282,7 @@ export default function AdminTurmas() {
                 </div>
                 <div>
                   <Label className="text-xs">Status</Label>
-                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v as Turma["status"] })}>
+                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Ativa">Ativa</SelectItem>
@@ -263,8 +306,10 @@ export default function AdminTurmas() {
               <DialogTitle>Alunos — {vincularOpen?.codigo}</DialogTitle>
             </DialogHeader>
             <div className="space-y-2 py-2 max-h-64 overflow-y-auto">
-              {ALUNOS_DISPONIVEIS.map((a) => {
-                const vinculado = vincularOpen?.alunos.includes(a.id);
+              {alunosDisponiveis.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-4">Nenhum aluno cadastrado no sistema.</p>
+              ) : alunosDisponiveis.map((a) => {
+                const vinculado = alunosVinculados.includes(a.id);
                 return (
                   <button
                     key={a.id}

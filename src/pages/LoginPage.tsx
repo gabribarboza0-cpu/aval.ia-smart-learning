@@ -6,13 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-
-const MOCK_USERS: Record<string, { password: string; role: string; name: string }> = {
-  "aluno@avalia.com": { password: "123456", role: "aluno", name: "Maria Silva" },
-  "professor@avalia.com": { password: "123456", role: "professor", name: "Dr. João Santos" },
-  "coordenador@avalia.com": { password: "123456", role: "coordenador", name: "Dra. Ana Oliveira" },
-  "admin@avalia.com": { password: "123456", role: "admin", name: "Carlos Admin" },
-};
+import { supabase } from "@/integrations/supabase/client";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
@@ -28,29 +22,48 @@ const LoginPage = () => {
     e.preventDefault();
     setIsLoading(true);
 
-    await new Promise((r) => setTimeout(r, 800));
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
 
-    const user = MOCK_USERS[email.toLowerCase()];
-    if (user && user.password === password) {
-      localStorage.setItem("avalia_user", JSON.stringify({ email, role: user.role, name: user.name }));
-      toast({ title: "Login realizado!", description: `Bem-vindo(a), ${user.name}` });
-      const routes: Record<string, string> = {
-        aluno: "/aluno",
-        professor: "/professor",
-        coordenador: "/coordenacao",
-        admin: "/admin",
-      };
-      navigate(routes[user.role] || "/");
-    } else {
-      toast({ title: "Erro de autenticação", description: "E-mail ou senha inválidos.", variant: "destructive" });
+      // Fetch role to redirect
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: roleData } = await supabase
+          .from("user_roles")
+          .select("role")
+          .eq("user_id", user.id)
+          .single();
+
+        const role = roleData?.role || "aluno";
+        const routes: Record<string, string> = {
+          aluno: "/aluno",
+          professor: "/professor",
+          coordenador: "/coordenacao",
+          admin: "/admin",
+        };
+        toast({ title: "Login realizado!", description: "Bem-vindo(a) ao AVAL.IA" });
+        navigate(routes[role] || "/");
+      }
+    } catch (error: any) {
+      toast({ title: "Erro de autenticação", description: error.message || "E-mail ou senha inválidos.", variant: "destructive" });
+    } finally {
+      setIsLoading(false);
     }
-    setIsLoading(false);
   };
 
-  const handleRecovery = (e: React.FormEvent) => {
+  const handleRecovery = async (e: React.FormEvent) => {
     e.preventDefault();
-    toast({ title: "E-mail enviado", description: "Verifique sua caixa de entrada para redefinir a senha." });
-    setShowRecovery(false);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(recoveryEmail, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) throw error;
+      toast({ title: "E-mail enviado", description: "Verifique sua caixa de entrada para redefinir a senha." });
+      setShowRecovery(false);
+    } catch (error: any) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    }
   };
 
   return (
@@ -185,14 +198,7 @@ const LoginPage = () => {
               </form>
 
               <div className="mt-8 p-4 rounded-lg bg-muted/50 border border-border">
-                <p className="text-xs text-muted-foreground mb-2 font-medium">Contas de demonstração:</p>
-                <div className="space-y-1 text-xs text-muted-foreground">
-                  <p><span className="font-medium text-foreground">Aluno:</span> aluno@avalia.com</p>
-                  <p><span className="font-medium text-foreground">Professor:</span> professor@avalia.com</p>
-                  <p><span className="font-medium text-foreground">Coordenador:</span> coordenador@avalia.com</p>
-                  <p><span className="font-medium text-foreground">Admin:</span> admin@avalia.com</p>
-                  <p className="mt-1"><span className="font-medium text-foreground">Senha:</span> 123456</p>
-                </div>
+                <p className="text-xs text-muted-foreground mb-2 font-medium">Para começar, crie um usuário admin na aba Cloud → Users.</p>
               </div>
             </>
           ) : (
