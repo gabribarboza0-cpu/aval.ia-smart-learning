@@ -6,15 +6,17 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, X, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Questao, DISCIPLINAS, COMPETENCIAS, TEMAS_POR_DISCIPLINA, NivelDificuldade, TipoQuestao, StatusValidacao, AderenciaDisciplina } from "@/types/questao";
 import { useToast } from "@/hooks/use-toast";
+import { upsertQuestao } from "@/lib/questaoService";
 
 interface Props {
   questao?: Questao | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (questao: Questao) => void;
+  onSave: () => void;
+  professorId?: string;
 }
 
 const emptyQuestao: Omit<Questao, "id" | "dataCriacao"> = {
@@ -42,9 +44,10 @@ const emptyQuestao: Omit<Questao, "id" | "dataCriacao"> = {
   poderDiscriminacao: 0,
 };
 
-export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave }: Props) {
+export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave, professorId }: Props) {
   const { toast } = useToast();
   const [form, setForm] = useState<Omit<Questao, "id" | "dataCriacao">>(emptyQuestao);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (questao) {
@@ -84,19 +87,21 @@ export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave 
     setForm((f) => ({ ...f, disciplinasSecundarias: secs }));
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!form.enunciado.trim() || !form.disciplinaPredominante) {
       toast({ title: "Campos obrigatórios", description: "Preencha o enunciado e a disciplina predominante.", variant: "destructive" });
       return;
     }
-    const saved: Questao = {
-      ...form,
-      id: questao?.id || `Q${String(Date.now()).slice(-4)}`,
-      dataCriacao: questao?.dataCriacao || new Date().toISOString().split("T")[0],
-    };
-    onSave(saved);
-    onOpenChange(false);
-    toast({ title: questao ? "Questão atualizada" : "Questão criada", description: `${saved.id} salva com sucesso.` });
+    setSaving(true);
+    try {
+      await upsertQuestao(form, questao?.id, professorId);
+      onSave();
+      onOpenChange(false);
+      toast({ title: questao ? "Questão atualizada" : "Questão criada", description: "Salva com sucesso no banco de dados." });
+    } catch (error: any) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    }
+    setSaving(false);
   };
 
   return (
@@ -107,13 +112,11 @@ export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave 
         </DialogHeader>
 
         <div className="space-y-5">
-          {/* Enunciado */}
           <div className="space-y-1.5">
             <Label>Enunciado *</Label>
             <Textarea value={form.enunciado} onChange={(e) => setForm((f) => ({ ...f, enunciado: e.target.value }))} rows={4} placeholder="Digite o enunciado da questão..." />
           </div>
 
-          {/* Alternativas */}
           <div className="space-y-2">
             <Label>Alternativas</Label>
             {form.alternativas.map((alt, i) => (
@@ -133,13 +136,11 @@ export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave 
             <p className="text-xs text-muted-foreground">Clique na letra para marcar o gabarito.</p>
           </div>
 
-          {/* Justificativa */}
           <div className="space-y-1.5">
             <Label>Justificativa</Label>
             <Textarea value={form.justificativa} onChange={(e) => setForm((f) => ({ ...f, justificativa: e.target.value }))} rows={2} placeholder="Justificativa do gabarito..." />
           </div>
 
-          {/* Row: Disciplina, Tipo, Dificuldade */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Disciplina Predominante *</Label>
@@ -174,7 +175,6 @@ export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave 
             </div>
           </div>
 
-          {/* Tema / Subtema */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Tema</Label>
@@ -189,7 +189,6 @@ export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave 
             </div>
           </div>
 
-          {/* Disciplinas secundárias */}
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <Label>Disciplinas Secundárias (Aderência)</Label>
@@ -212,7 +211,6 @@ export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave 
             ))}
           </div>
 
-          {/* Competências */}
           <div className="space-y-2">
             <Label>Competências Avaliadas</Label>
             <div className="flex flex-wrap gap-1.5">
@@ -229,7 +227,6 @@ export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave 
             </div>
           </div>
 
-          {/* Row: Interdisciplinaridade, Status, Perfil */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1.5">
               <Label>Interdisciplinaridade</Label>
@@ -260,27 +257,21 @@ export default function QuestaoFormDialog({ questao, open, onOpenChange, onSave 
             </div>
           </div>
 
-          {/* Row: Origem, Professor, Repertório */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Origem da Questão</Label>
               <Input value={form.origemQuestao} onChange={(e) => setForm((f) => ({ ...f, origemQuestao: e.target.value }))} placeholder="Ex: Autoral, ENADE, Concurso..." />
             </div>
             <div className="space-y-1.5">
-              <Label>Professor Responsável</Label>
-              <Input value={form.professorResponsavel} onChange={(e) => setForm((f) => ({ ...f, professorResponsavel: e.target.value }))} placeholder="Nome do professor" />
+              <Label>Repertório Contemporâneo</Label>
+              <Input value={form.repertorioContemporaneo} onChange={(e) => setForm((f) => ({ ...f, repertorioContemporaneo: e.target.value }))} placeholder="Referências atuais..." />
             </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label>Repertório Contemporâneo</Label>
-            <Textarea value={form.repertorioContemporaneo} onChange={(e) => setForm((f) => ({ ...f, repertorioContemporaneo: e.target.value }))} rows={2} placeholder="Referências jurisprudenciais, legislativas ou doutrinárias atuais..." />
           </div>
         </div>
 
         <DialogFooter className="mt-4">
           <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleSave}>{questao ? "Salvar Alterações" : "Criar Questão"}</Button>
+          <Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : questao ? "Salvar Alterações" : "Criar Questão"}</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

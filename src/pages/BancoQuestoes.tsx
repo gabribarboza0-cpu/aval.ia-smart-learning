@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Library, Plus, BarChart3, FileText, CheckCircle, AlertTriangle } from "lucide-react";
 import AppLayout from "@/components/AppLayout";
@@ -9,16 +9,32 @@ import QuestaoCard from "@/components/questoes/QuestaoCard";
 import QuestaoDetailDialog from "@/components/questoes/QuestaoDetailDialog";
 import QuestaoFormDialog from "@/components/questoes/QuestaoFormDialog";
 import { Questao } from "@/types/questao";
-import { mockQuestoes } from "@/data/mockQuestoes";
+import { fetchQuestoes } from "@/lib/questaoService";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function BancoQuestoes() {
-  const [questoes, setQuestoes] = useState<Questao[]>(mockQuestoes);
+  const [questoes, setQuestoes] = useState<Questao[]>([]);
   const [filters, setFilters] = useState<QuestaoFilterValues>(defaultFilters);
   const [viewQuestao, setViewQuestao] = useState<Questao | null>(null);
-  const [editQuestao, setEditQuestao] = useState<Questao | null | undefined>(undefined); // undefined = closed, null = new
+  const [editQuestao, setEditQuestao] = useState<Questao | null | undefined>(undefined);
   const [viewOpen, setViewOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
-  const professores = useMemo(() => [...new Set(questoes.map((q) => q.professorResponsavel))], [questoes]);
+  const loadQuestoes = async () => {
+    setIsLoading(true);
+    try {
+      const data = await fetchQuestoes();
+      setQuestoes(data);
+    } catch (e) {
+      console.error("Erro ao carregar questões:", e);
+    }
+    setIsLoading(false);
+  };
+
+  useEffect(() => { loadQuestoes(); }, []);
+
+  const professores = useMemo(() => [...new Set(questoes.map((q) => q.professorResponsavel).filter(Boolean))], [questoes]);
 
   const filtered = useMemo(() => {
     return questoes.filter((q) => {
@@ -38,7 +54,8 @@ export default function BancoQuestoes() {
 
   const stats = useMemo(() => {
     const validadas = questoes.filter((q) => q.statusValidacao === "Validada").length;
-    const mediaAcerto = questoes.filter((q) => q.historicoUso > 0).reduce((s, q) => s + q.taxaAcerto, 0) / Math.max(1, questoes.filter((q) => q.historicoUso > 0).length);
+    const usadas = questoes.filter((q) => q.historicoUso > 0);
+    const mediaAcerto = usadas.length > 0 ? usadas.reduce((s, q) => s + q.taxaAcerto, 0) / usadas.length : 0;
     const disciplinas = new Set(questoes.map((q) => q.disciplinaPredominante)).size;
     return { total: questoes.length, validadas, mediaAcerto: Math.round(mediaAcerto), disciplinas };
   }, [questoes]);
@@ -47,22 +64,13 @@ export default function BancoQuestoes() {
   const handleEdit = (q: Questao) => setEditQuestao(q);
   const handleNew = () => setEditQuestao(null);
 
-  const handleSave = (q: Questao) => {
-    setQuestoes((prev) => {
-      const idx = prev.findIndex((p) => p.id === q.id);
-      if (idx >= 0) {
-        const next = [...prev];
-        next[idx] = q;
-        return next;
-      }
-      return [q, ...prev];
-    });
+  const handleSave = () => {
+    loadQuestoes();
   };
 
   return (
     <AppLayout>
       <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold text-foreground flex items-center gap-2">
@@ -77,7 +85,6 @@ export default function BancoQuestoes() {
           </Button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard title="Total de Questões" value={String(stats.total)} icon={<FileText className="h-5 w-5" />} />
           <StatCard title="Validadas" value={String(stats.validadas)} icon={<CheckCircle className="h-5 w-5" />} subtitle={`${Math.round((stats.validadas / Math.max(1, stats.total)) * 100)}% do total`} />
@@ -85,15 +92,13 @@ export default function BancoQuestoes() {
           <StatCard title="Disciplinas" value={String(stats.disciplinas)} icon={<Library className="h-5 w-5" />} subtitle="áreas cobertas" />
         </div>
 
-        {/* Filters */}
         <div className="bg-card rounded-lg border border-border p-4 shadow-card">
           <QuestaoFilters filters={filters} onChange={setFilters} professores={professores} />
         </div>
 
-        {/* Results */}
         <div className="flex items-center justify-between">
           <p className="text-sm text-muted-foreground">
-            {filtered.length} questão{filtered.length !== 1 ? "ões" : ""} encontrada{filtered.length !== 1 ? "s" : ""}
+            {isLoading ? "Carregando..." : `${filtered.length} questão${filtered.length !== 1 ? "ões" : ""} encontrada${filtered.length !== 1 ? "s" : ""}`}
           </p>
         </div>
 
@@ -101,7 +106,7 @@ export default function BancoQuestoes() {
           {filtered.map((q) => (
             <QuestaoCard key={q.id} questao={q} onView={handleView} onEdit={handleEdit} />
           ))}
-          {filtered.length === 0 && (
+          {!isLoading && filtered.length === 0 && (
             <div className="text-center py-12 text-muted-foreground">
               <AlertTriangle className="h-8 w-8 mx-auto mb-3 opacity-40" />
               <p className="text-sm">Nenhuma questão encontrada com os filtros selecionados.</p>
@@ -109,13 +114,13 @@ export default function BancoQuestoes() {
           )}
         </div>
 
-        {/* Dialogs */}
         <QuestaoDetailDialog questao={viewQuestao} open={viewOpen} onOpenChange={setViewOpen} />
         <QuestaoFormDialog
           questao={editQuestao === undefined ? undefined : editQuestao}
           open={editQuestao !== undefined}
           onOpenChange={(open) => { if (!open) setEditQuestao(undefined); }}
           onSave={handleSave}
+          professorId={user?.id}
         />
       </motion.div>
     </AppLayout>
