@@ -60,6 +60,8 @@ export default function AdminDisciplinas() {
   const [form, setForm] = useState(emptyForm);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [vincularOpen, setVincularOpen] = useState<Disciplina | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
 
   const filtradas = useMemo(() => {
     return disciplinas.filter((d) => {
