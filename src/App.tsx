@@ -14,6 +14,8 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AdminUsuarios from "./pages/AdminUsuarios";
 import AdminConfiguracoes from "./pages/AdminConfiguracoes";
 import AdminRelatorios from "./pages/AdminRelatorios";
+import AdminTurmas from "./pages/AdminTurmas";
+import AdminDisciplinas from "./pages/AdminDisciplinas";
 import NotFound from "./pages/NotFound";
 import BancoQuestoes from "./pages/BancoQuestoes";
 import CriarAvaliacao from "./pages/CriarAvaliacao";
