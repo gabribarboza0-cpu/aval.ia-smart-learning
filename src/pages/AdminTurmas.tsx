@@ -31,7 +31,7 @@ interface TurmaAluno {
   nome: string;
 }
 
-const emptyForm = { codigo: "", nome: "", periodo: "1º", turno: "Matutino" as const, status: "Ativa" };
+const emptyForm = { codigo: "", nome: "", periodo: "1º", turno: "Matutino" as "Matutino" | "Vespertino" | "Noturno", status: "Ativa" };
 
 export default function AdminTurmas() {
   const [turmas, setTurmas] = useState<Turma[]>([]);
