@@ -9,6 +9,7 @@ import ProfessorDashboard from "./pages/ProfessorDashboard";
 import CoordenacaoDashboard from "./pages/CoordenacaoDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
+import BancoQuestoes from "./pages/BancoQuestoes";
 
 const queryClient = new QueryClient();
 
@@ -24,10 +25,13 @@ const App = () => (
           <Route path="/aluno" element={<AlunoDashboard />} />
           <Route path="/aluno/*" element={<AlunoDashboard />} />
           <Route path="/professor" element={<ProfessorDashboard />} />
+          <Route path="/professor/questoes" element={<BancoQuestoes />} />
           <Route path="/professor/*" element={<ProfessorDashboard />} />
           <Route path="/coordenacao" element={<CoordenacaoDashboard />} />
+          <Route path="/coordenacao/questoes" element={<BancoQuestoes />} />
           <Route path="/coordenacao/*" element={<CoordenacaoDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
+          <Route path="/admin/questoes" element={<BancoQuestoes />} />
           <Route path="/admin/*" element={<AdminDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
