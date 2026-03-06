@@ -31,6 +31,7 @@ const App = () => (
           <Route path="/aluno/provas" element={<AlunoProvas />} />
           <Route path="/aluno/diagnostico" element={<AlunoDiagnostico />} />
           <Route path="/aluno/recomendacoes" element={<AlunoRecomendacoes />} />
+          <Route path="/aluno/evolucao" element={<AlunoEvolucao />} />
           <Route path="/aluno/*" element={<AlunoDashboard />} />
           <Route path="/professor" element={<ProfessorDashboard />} />
           <Route path="/professor/questoes" element={<BancoQuestoes />} />
