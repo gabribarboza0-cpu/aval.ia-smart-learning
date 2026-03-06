@@ -160,7 +160,7 @@ export default function AdminDisciplinas() {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.map((d) => (
+                {filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((d) => (
                   <tr key={d.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4 font-medium text-foreground">{d.codigo}</td>
                     <td className="py-3 px-4 text-foreground">{d.nome}</td>
