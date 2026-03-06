@@ -48,7 +48,7 @@ const INITIAL_DISCIPLINAS: Disciplina[] = [
   { id: "d6", codigo: "DPR01", nome: "Direito Processual Civil I", cargaHoraria: 80, periodo: "3º", status: "Inativa", turmasVinculadas: [] },
 ];
 
-const emptyForm = { codigo: "", nome: "", cargaHoraria: 60, periodo: "1º", status: "Ativa" as const, professorId: "", turmasVinculadas: [] as string[] };
+const emptyForm: Omit<Disciplina, "id"> = { codigo: "", nome: "", cargaHoraria: 60, periodo: "1º", status: "Ativa", professorId: "", turmasVinculadas: [] };
 
 export default function AdminDisciplinas() {
   const [disciplinas, setDisciplinas] = useState<Disciplina[]>(INITIAL_DISCIPLINAS);

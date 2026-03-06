@@ -41,7 +41,7 @@ const ALUNOS_DISPONIVEIS = [
   { id: "u12", nome: "Camila Rocha" },
 ];
 
-const emptyTurma = { codigo: "", nome: "", periodo: "1º", turno: "Matutino" as const, status: "Ativa" as const, alunos: [] as string[] };
+const emptyTurma: Omit<Turma, "id"> = { codigo: "", nome: "", periodo: "1º", turno: "Matutino", status: "Ativa", alunos: [] };
 
 export default function AdminTurmas() {
   const [turmas, setTurmas] = useState<Turma[]>(INITIAL_TURMAS);
