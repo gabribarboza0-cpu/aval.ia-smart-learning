@@ -272,6 +272,7 @@ export default function AdminUsuarios() {
               </tbody>
             </table>
           </div>
+          <TablePagination totalItems={filtrados.length} currentPage={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
         </div>
 
         {/* Dialog criar/editar */}

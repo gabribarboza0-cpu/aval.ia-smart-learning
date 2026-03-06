@@ -196,6 +196,7 @@ export default function AdminTurmas() {
               </tbody>
             </table>
           </div>
+          <TablePagination totalItems={filtradas.length} currentPage={currentPage} pageSize={pageSize} onPageChange={setCurrentPage} onPageSizeChange={setPageSize} />
         </div>
 
         {/* Dialog criar/editar */}
