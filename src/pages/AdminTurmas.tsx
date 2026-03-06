@@ -151,7 +151,7 @@ export default function AdminTurmas() {
                 </tr>
               </thead>
               <tbody>
-                {filtradas.map((t) => (
+                {filtradas.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((t) => (
                   <tr key={t.id} className="border-b border-border/50 hover:bg-muted/20 transition-colors">
                     <td className="py-3 px-4 font-medium text-foreground">{t.codigo}</td>
                     <td className="py-3 px-4 text-muted-foreground hidden sm:table-cell">{t.nome}</td>
