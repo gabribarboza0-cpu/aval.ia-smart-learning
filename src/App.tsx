@@ -14,6 +14,7 @@ import CriarAvaliacao from "./pages/CriarAvaliacao";
 import AlunoProvas from "./pages/AlunoProvas";
 import AlunoDiagnostico from "./pages/AlunoDiagnostico";
 import AlunoRecomendacoes from "./pages/AlunoRecomendacoes";
+import AlunoEvolucao from "./pages/AlunoEvolucao";
 
 const queryClient = new QueryClient();
 
