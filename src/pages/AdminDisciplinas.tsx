@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import {
   BookOpen, Plus, Search, Edit2, Trash2, Check, X, Users,
 } from "lucide-react";
+import TablePagination from "@/components/TablePagination";
 import AppLayout from "@/components/AppLayout";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
