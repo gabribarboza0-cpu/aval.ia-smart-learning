@@ -11,6 +11,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import BancoQuestoes from "./pages/BancoQuestoes";
 import CriarAvaliacao from "./pages/CriarAvaliacao";
+import AlunoProvas from "./pages/AlunoProvas";
 
 const queryClient = new QueryClient();
 
@@ -24,6 +25,7 @@ const App = () => (
           <Route path="/" element={<Navigate to="/login" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/aluno" element={<AlunoDashboard />} />
+          <Route path="/aluno/provas" element={<AlunoProvas />} />
           <Route path="/aluno/*" element={<AlunoDashboard />} />
           <Route path="/professor" element={<ProfessorDashboard />} />
           <Route path="/professor/questoes" element={<BancoQuestoes />} />
