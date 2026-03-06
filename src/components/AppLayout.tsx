@@ -48,6 +48,8 @@ const navItems: Record<UserRole, NavItem[]> = {
   admin: [
     { title: "Dashboard", url: "/admin", icon: LayoutDashboard },
     { title: "Usuários", url: "/admin/usuarios", icon: Users },
+    { title: "Turmas", url: "/admin/turmas", icon: GraduationCap },
+    { title: "Disciplinas", url: "/admin/disciplinas", icon: BookOpen },
     { title: "Banco de Questões", url: "/admin/questoes", icon: Library },
     { title: "Configurações", url: "/admin/configuracoes", icon: Settings },
     { title: "Relatórios", url: "/admin/relatorios", icon: BarChart3 },
