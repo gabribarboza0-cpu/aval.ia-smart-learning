@@ -7,6 +7,9 @@ import LoginPage from "./pages/LoginPage";
 import AlunoDashboard from "./pages/AlunoDashboard";
 import ProfessorDashboard from "./pages/ProfessorDashboard";
 import CoordenacaoDashboard from "./pages/CoordenacaoDashboard";
+import CoordenacaoTurmas from "./pages/CoordenacaoTurmas";
+import CoordenacaoDocentes from "./pages/CoordenacaoDocentes";
+import CoordenacaoIndicadores from "./pages/CoordenacaoIndicadores";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import BancoQuestoes from "./pages/BancoQuestoes";
@@ -38,6 +41,9 @@ const App = () => (
           <Route path="/professor/criar-avaliacao" element={<CriarAvaliacao />} />
           <Route path="/professor/*" element={<ProfessorDashboard />} />
           <Route path="/coordenacao" element={<CoordenacaoDashboard />} />
+          <Route path="/coordenacao/turmas" element={<CoordenacaoTurmas />} />
+          <Route path="/coordenacao/docentes" element={<CoordenacaoDocentes />} />
+          <Route path="/coordenacao/indicadores" element={<CoordenacaoIndicadores />} />
           <Route path="/coordenacao/questoes" element={<BancoQuestoes />} />
           <Route path="/coordenacao/*" element={<CoordenacaoDashboard />} />
           <Route path="/admin" element={<AdminDashboard />} />
