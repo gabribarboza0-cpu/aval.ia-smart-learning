@@ -10,6 +10,7 @@ import CoordenacaoDashboard from "./pages/CoordenacaoDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import NotFound from "./pages/NotFound";
 import BancoQuestoes from "./pages/BancoQuestoes";
+import CriarAvaliacao from "./pages/CriarAvaliacao";
 
 const queryClient = new QueryClient();
 
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/aluno/*" element={<AlunoDashboard />} />
           <Route path="/professor" element={<ProfessorDashboard />} />
           <Route path="/professor/questoes" element={<BancoQuestoes />} />
+          <Route path="/professor/criar-avaliacao" element={<CriarAvaliacao />} />
           <Route path="/professor/*" element={<ProfessorDashboard />} />
           <Route path="/coordenacao" element={<CoordenacaoDashboard />} />
           <Route path="/coordenacao/questoes" element={<BancoQuestoes />} />
