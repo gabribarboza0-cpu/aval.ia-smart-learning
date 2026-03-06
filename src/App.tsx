@@ -13,6 +13,7 @@ import BancoQuestoes from "./pages/BancoQuestoes";
 import CriarAvaliacao from "./pages/CriarAvaliacao";
 import AlunoProvas from "./pages/AlunoProvas";
 import AlunoDiagnostico from "./pages/AlunoDiagnostico";
+import AlunoRecomendacoes from "./pages/AlunoRecomendacoes";
 
 const queryClient = new QueryClient();
 
